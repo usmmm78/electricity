@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>전기 전력 계산기</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .calculator {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .button-group button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            background-color: #e9e9e9;
+            cursor: pointer;
+        }
+        .button-group button.active {
+            background-color: #4a90e2;
+            color: white;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .calculate-btn {
+            flex: 1;
+            padding: 10px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .reset-btn {
+            padding: 10px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .error {
+            color: #f44336;
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #ffebee;
+            border-radius: 4px;
+            display: none;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+            display: none;
+        }
+        .formula-info {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+        .formula-info ul {
+            padding-left: 20px;
+        }
+        /* 인터넷 익스플로러 호환성 */
+        @media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
+            .button-group, .action-buttons {
+                display: block;
+            }
+            .button-group button {
+                margin-right: 5px;
+                margin-bottom: 5px;
+                width: 32%;
+                display: inline-block;
+            }
+            .action-buttons button {
+                display: inline-block;
+            }
+            .calculate-btn {
+                width: 75%;
+            }
+            .reset-btn {
+                width: 20%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>전기 전력 계산기</h1>
+        
+        <div class="form-group">
+            <label>계산 방식</label>
+            <div class="button-group" id="calculation-method">
+                <button class="active" data-method="vi">P = V × I</button>
+                <button data-method="ir">P = I² × R</button>
+                <button data-method="vr">P = V²/R</button>
+            </div>
+        </div>
+        
+        <div class="form-group" id="voltage-group">
+            <label for="voltage">전압 (V)</label>
+            <input type="number" id="voltage" placeholder="전압을 입력하세요">
+        </div>
+        
+        <div class="form-group" id="current-group">
+            <label for="current">전류 (A)</label>
+            <input type="number" id="current" placeholder="전류를 입력하세요">
+        </div>
+        
+        <div class="form-group" id="resistance-group" style="display: none;">
+            <label for="resistance">저항 (Ω)</label>
+            <input type="number" id="resistance" placeholder="저항을 입력하세요">
+        </div>
+        
+        <div class="action-buttons">
+            <button class="calculate-btn" id="calculate">계산하기</button>
+            <button class="reset-btn" id="reset">초기화</button>
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="result" id="result">
+            <h2>계산 결과:</h2>
+            <p id="power-result"></p>
+        </div>
+        
+        <div class="formula-info">
+            <h3>공식 안내:</h3>
+            <ul>
+                <li>P = V × I: 전압(V)과 전류(A)로 전력(W) 계산</li>
+                <li>P = I² × R: 전류(A)와 저항(Ω)으로 전력(W) 계산</li>
+                <li>P = V²/R: 전압(V)과 저항(Ω)으로 전력(W) 계산</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // IE 호환성을 위한 코드
+        function addEvent(element, event, handler) {
+            if (element.addEventListener) {
+                element.addEventListener(event, handler, false);
+            } else if (element.attachEvent) {
+                element.attachEvent('on' + event, handler);
+            }
+        }
+
+        // 요소 가져오기
+        var methodButtons = document.getElementById('calculation-method').getElementsByTagName('button');
+        var voltageGroup = document.getElementById('voltage-group');
+        var currentGroup = document.getElementById('current-group');
+        var resistanceGroup = document.getElementById('resistance-group');
+        var voltageInput = document.getElementById('voltage');
+        var currentInput = document.getElementById('current');
+        var resistanceInput = document.getElementById('resistance');
+        var calculateBtn = document.getElementById('calculate');
+        var resetBtn = document.getElementById('reset');
+        var errorDiv = document.getElementById('error');
+        var resultDiv = document.getElementById('result');
+        var powerResult = document.getElementById('power-result');
+        
+        // 현재 선택된 계산 방식
+        var currentMethod = 'vi';
+        
+        // 계산 방식 버튼에 이벤트 추가
+        for (var i = 0; i < methodButtons.length; i++) {
+            addEvent(methodButtons[i], 'click', function() {
+                // 모든 버튼에서 active 클래스 제거
+                for (var j = 0; j < methodButtons.length; j++) {
+                    methodButtons[j].className = '';
+                }
+                
+                // 클릭된 버튼에 active 클래스 추가
+                this.className = 'active';
+                
+                // 현재 방식 업데이트
+                currentMethod = this.getAttribute('data-method');
+                
+                // 입력 필드 표시/숨김 처리
+                updateInputFields();
+                
+                // 결과 및 오류 숨김
+                errorDiv.style.display = 'none';
+                resultDiv.style.display = 'none';
+            });
+        }
+        
+        // 입력 필드 표시/숨김 처리 함수
+        function updateInputFields() {
+            if (currentMethod === 'vi') {
+                voltageGroup.style.display = 'block';
+                currentGroup.style.display = 'block';
+                resistanceGroup.style.display = 'none';
+            } else if (currentMethod === 'ir') {
+                voltageGroup.style.display = 'none';
+                currentGroup.style.display = 'block';
+                resistanceGroup.style.display = 'block';
+            } else if (currentMethod === 'vr') {
+                voltageGroup.style.display = 'block';
+                currentGroup.style.display = 'none';
+                resistanceGroup.style.display = 'block';
+            }
+        }
+        
+        // 계산 버튼 이벤트
+        addEvent(calculateBtn, 'click', function() {
+            // 오류 및 결과 초기화
+            errorDiv.style.display = 'none';
+            resultDiv.style.display = 'none';
+            
+            try {
+                var voltage = parseFloat(voltageInput.value);
+                var current = parseFloat(currentInput.value);
+                var resistance = parseFloat(resistanceInput.value);
+                var power = 0;
+                
+                // 입력값 검증
+                if (currentMethod === 'vi' && (isNaN(voltage) || isNaN(current))) {
+                    errorDiv.innerHTML = '전압과 전류를 모두 입력해주세요.';
+                    errorDiv.style.display = 'block';
+                    return;
+                } else if (currentMethod === 'ir' && (isNaN(current) || isNaN(resistance))) {
+                    errorDiv.innerHTML = '전류와 저항을 모두 입력해주세요.';
+                    errorDiv.style.display = 'block';
+                    return;
+                } else if (currentMethod === 'vr' && (isNaN(voltage) || isNaN(resistance))) {
+                    errorDiv.innerHTML = '전압과 저항을 모두 입력해주세요.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                
+                // 전력 계산
+                if (currentMethod === 'vi') {
+                    power = voltage * current;
+                } else if (currentMethod === 'ir') {
+                    power = current * current * resistance;
+                } else if (currentMethod === 'vr') {
+                    power = voltage * voltage / resistance;
+                }
+                
+                // 결과 표시
+                powerResult.innerHTML = '전력 (P) = ' + power.toFixed(2) + ' 와트(W)';
+                resultDiv.style.display = 'block';
+            } catch (e) {
+                errorDiv.innerHTML = '계산 중 오류가 발생했습니다. 입력값을 확인해주세요.';
+                errorDiv.style.display = 'block';
+            }
+        });
+        
+        // 초기화 버튼 이벤트
+        addEvent(resetBtn, 'click', function() {
+            // 입력값 초기화
+            voltageInput.value = '';
+            currentInput.value = '';
+            resistanceInput.value = '';
+            
+            // 계산 방식 초기화
+            for (var i = 0; i < methodButtons.length; i++) {
+                if (methodButtons[i].getAttribute('data-method') === 'vi') {
+                    methodButtons[i].className = 'active';
+                } else {
+                    methodButtons[i].className = '';
+                }
+            }
+            
+            currentMethod = 'vi';
+            updateInputFields();
+            
+            // 결과 및 오류 숨김
+            errorDiv.style.display = 'none';
+            resultDiv.style.display = 'none';
+        });
+        
+        // 초기 입력 필드 설정
+        updateInputFields();
+    </script>
+</body>
+</html>
